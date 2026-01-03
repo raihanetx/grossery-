@@ -12,6 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Hind Siliguri: For professional Bengali Taka symbol -->
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Babel for in-browser JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
         html { scroll-behavior: smooth; }
         body {
@@ -45,7 +49,7 @@
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
@@ -53,6 +57,634 @@
 </head>
 <body class="bg-white text-[#121212] overflow-x-hidden pb-20 md:pb-0">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+
+        // --- Interfaces ---
+        interface Product {
+          id: string | number;
+          name: string;
+          price: string;
+          image: string;
+          category: string;
+        }
+
+        interface Category {
+          id: string;
+          name: string;
+          icon: string;
+        }
+
+        interface HeaderProps {
+          onBack?: () => void;
+        }
+
+        interface ProductDetailsProps {
+          product: Product;
+          onGoHome: () => void;
+          onGoToCategory: (category: string) => void;
+        }
+
+        interface ProductCardProps {
+          product: Product;
+          onClick: () => void;
+        }
+
+        interface ProductGridProps {
+          products: Product[];
+          categories: Category[];
+          activeCategory: string;
+          onProductClick: (product: Product) => void;
+        }
+
+        // --- Components ---
+
+        const Header = ({ onBack }: HeaderProps) => {
+          return (
+            <header className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-gray-100">
+                <div className="max-w-6xl mx-auto flex h-16 items-center justify-between px-5 relative">
+                  <button 
+                    onClick={onBack}
+                    className={`text-2xl text-gray-800 hover:text-orange-500 transition-colors z-10 w-10 h-10 flex items-center justify-center -ml-2 rounded-full active:bg-gray-100 ${onBack ? 'hover:bg-gray-100' : ''}`}
+                  >
+                    <i className={onBack ? "ri-arrow-left-line" : "ri-menu-2-line"}></i>
+                  </button>
+
+                  {/* Logo: Centered absolutely */}
+                  <a href="#" onClick={(e) => { e.preventDefault(); if(onBack) onBack(); }} className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl md:text-2xl font-extrabold text-orange-500 tracking-tight z-10">
+                    Krishi <span className="text-gray-900">Bitan</span>
+                  </a>
+
+                  <div className="flex items-center gap-6 md:gap-8 text-gray-800 z-10">
+                    <div className="relative">
+                      <i className="ri-shopping-bag-line text-2xl cursor-pointer hover:text-orange-500 transition-colors"></i>
+                      {/* Notification: Background removed, text colored orange */}
+                      <span className="absolute -top-1 -right-2 text-orange-600 text-[12px] font-extrabold">
+                        2
+                      </span>
+                    </div>
+                    <i className="ri-user-3-line text-2xl cursor-pointer hover:text-orange-500 transition-colors"></i>
+                  </div>
+                </div>
+              </header>
+          );
+        };
+
+        const SearchBar = () => {
+          const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+          return (
+            <div className="w-full max-w-[420px] md:max-w-[600px] relative z-50 px-5 md:px-0">
+              <div className="flex items-center gap-3">
+                {/* Search Input - Main Bar */}
+                <div className="flex-1 flex items-center bg-white border border-gray-100 rounded-2xl px-4 h-14 shadow-sm focus-within:ring-2 focus-within:ring-orange-100 focus-within:border-orange-200 transition-all">
+                  <i className="ri-search-2-line text-xl text-gray-400 mr-3"></i>
+                  <input
+                    type="text"
+                    placeholder="Search for groceries..."
+                    className="w-full bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-gray-400 text-gray-800 h-full"
+                  />
+                </div>
+
+                {/* Filter Button - Solid Orange for visibility, clearly separated */}
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`shrink-0 w-14 h-14 flex items-center justify-center rounded-2xl shadow-sm transition-all duration-200 active:scale-95 ${
+                    isFilterOpen 
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-orange-500 text-white hover:bg-orange-600'
+                  }`}
+                >
+                  <i className="ri-sound-module-line text-xl"></i>
+                </button>
+              </div>
+
+              {/* Filter Options - Direct Chips appearing below */}
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-out ${
+                  isFilterOpen ? 'max-h-[100px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'
+                }`}
+              >
+                 <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                     <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:border-orange-500 hover:text-orange-500 transition-colors shadow-sm">
+                        Popular
+                     </button>
+                     <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:border-orange-500 hover:text-orange-500 transition-colors shadow-sm">
+                        Low to High
+                     </button>
+                     <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:border-orange-500 hover:text-orange-500 transition-colors shadow-sm">
+                        High to Low
+                     </button>
+                 </div>
+              </div>
+            </div>
+          );
+        };
+
+        const Hero = () => {
+          return (
+            <section className="relative flex flex-col items-center justify-center px-5 pt-8 pb-4 text-center bg-gradient-to-b from-orange-100/60 via-orange-50/20 to-white md:pt-20 md:pb-24 overflow-hidden">
+                {/* Decorated Background Icons */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <i className="ri-cake-3-line absolute top-10 left-[10%] text-orange-500 opacity-[0.08] text-6xl rotate-12"></i>
+                  <i className="ri-leaf-line absolute top-20 right-[8%] text-orange-500 opacity-[0.08] text-7xl -rotate-12"></i>
+                  <i className="ri-cup-line absolute bottom-12 left-[15%] text-orange-500 opacity-[0.08] text-5xl rotate-[25deg]"></i>
+                  <i className="ri-bread-line absolute bottom-24 right-[12%] text-orange-500 opacity-[0.08] text-8xl -rotate-[20deg]"></i>
+                </div>
+
+                <div className="max-w-4xl relative z-10">
+                  <h1 className="hero-title text-[38px] md:text-7xl font-extrabold tracking-tighter mb-3">
+                    <span className="text-gray-900 font-extrabold">Eat Fresh</span> <br className="md:hidden" />
+                    <span className="text-orange-500 font-extrabold">Live Better</span>
+                  </h1>
+                  <p className="text-xs md:text-xl text-gray-500 mb-6 md:mb-10 max-w-xs md:max-w-none mx-auto font-medium">
+                    Premium hand-picked quality ingredients <br className="md:hidden" /> delivered daily to your door.
+                  </p>
+                </div>
+
+                <SearchBar />
+              </section>
+          );
+        };
+
+        const CategoryList = ({ categories, activeCategory, setActiveCategory }) => {
+          return (
+            <div className="relative z-20 pb-2 pt-2 md:-mt-16">
+                <div className="flex gap-5 md:gap-8 overflow-x-auto px-6 justify-start md:justify-center no-scrollbar pb-8">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      className="group flex flex-col items-center shrink-0 relative"
+                    >
+                      {/* Wrapper with fixed width matching the circle to ensure border-to-border gap calculation */}
+                      <div className="w-14 md:w-16 flex flex-col items-center">
+                          <div
+                            className={`w-14 h-14 md:w-16 md:h-16 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                              activeCategory === cat.id
+                                ? 'border-orange-500 bg-white shadow-md'
+                                : 'border-gray-100 bg-white hover:border-orange-200'
+                            }`}
+                          >
+                            <i
+                              className={`${cat.icon} text-2xl transition-colors duration-300 ${
+                                activeCategory === cat.id ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'
+                              }`}
+                            ></i>
+                          </div>
+                          
+                          {/* Absolute positioning for text to not affect the flex gap */}
+                          <span
+                            className={`absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 ${
+                              activeCategory === cat.id ? 'text-orange-500' : 'text-gray-400 group-hover:text-gray-600'
+                            }`}
+                          >
+                            {cat.name}
+                          </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+          );
+        };
+
+        const ProductCard = ({ product, onClick }) => {
+          // Extract symbol and amount assuming the format is always "৳Amount"
+          const currencySymbol = product.price.charAt(0);
+          const priceAmount = product.price.substring(1);
+
+          return (
+            <div onClick={onClick} className="group flex flex-col cursor-pointer">
+              {/* Image Container: Added border-gray-200 for the requested thin border */}
+              <div className="aspect-square rounded-xl overflow-hidden mb-2 bg-[#F7F7F7] relative border border-gray-200">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                />
+                {/* Add Button: Smaller size (h-7 w-7), smaller icon (text-sm), closer to corner (bottom-1.5 right-1.5) */}
+                <button className="absolute bottom-1.5 right-1.5 h-7 w-7 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center text-gray-900 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all z-10 md:opacity-0 md:translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 duration-300">
+                    <i className="ri-add-line text-sm font-bold"></i>
+                </button>
+              </div>
+              
+              {/* Text Container: pl-2 to shift content slightly to the right */}
+              <div className="flex flex-col pl-2">
+                {/* Title: font-medium for normal look */}
+                <h3 className="text-[13px] font-medium text-black mb-[2px] leading-snug truncate">
+                  {product.name}
+                </h3>
+                
+                {/* Price and Action Row - Items centered to ensure perfect alignment */}
+                <div className="flex items-center h-5">
+                  {/* Price: Adjusted sizes to match Buy Now button weight */}
+                  <div className="flex items-center text-black font-black leading-none">
+                    {/* Symbol: Moved up by changing translate-y from 1px to 0.5px */}
+                    <span className="text-[15px] font-['Hind_Siliguri'] translate-y-[0.5px]">
+                      {currencySymbol}
+                    </span>
+                    {/* Amount: 13px matches the visual height of 11px Uppercase button */}
+                    <span className="text-[13px] font-sans ml-[1px]">
+                      {priceAmount}
+                    </span>
+                  </div>
+                  
+                  {/* Vertical Line Separator: Even spacing */}
+                  <div className="w-[1px] h-[10px] bg-gray-300 ml-3 mr-2"></div>
+
+                  {/* Buy Now Button: 11px Uppercase + Icon 11px = Visually same height as Price */}
+                  <button className="text-[11px] font-black text-black px-0 py-0 rounded uppercase tracking-wider hover:text-orange-600 transition-colors flex items-center gap-1 leading-none">
+                    <i className="ri-flashlight-fill font-normal text-[11px]"></i>
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const ProductGrid = ({ products, categories, activeCategory, onProductClick }) => {
+          // Determine which categories to show
+          const categoriesToShow = activeCategory === 'all' 
+            ? categories 
+            : categories.filter(c => c.id === activeCategory);
+
+          return (
+            <main className="px-5 max-w-6xl mx-auto pb-12 space-y-12">
+                {categoriesToShow.map((category) => {
+                  const categoryProducts = products.filter(p => p.category === category.id);
+                  
+                  if (categoryProducts.length === 0) return null;
+
+                  return (
+                    <section key={category.id} id={category.id} className="scroll-mt-24">
+                      <h2 className="text-sm font-black text-gray-900 mb-6 flex items-center justify-start gap-3 tracking-[0.2em] uppercase">
+                        <span className="w-8 h-[1px] bg-orange-500"></span>
+                        {category.name}
+                      </h2>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                        {categoryProducts.map((product) => (
+                          <ProductCard 
+                            key={product.id} 
+                            product={product} 
+                            onClick={() => onProductClick(product)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </main>
+          );
+        };
+
+        const MobileNav = () => {
+          return (
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-8 py-3 z-50 flex justify-between items-center shadow-lg">
+                <a href="#" className="text-orange-500">
+                  <i className="ri-home-5-fill text-2xl"></i>
+                </a>
+                <a href="#" className="text-gray-400">
+                  <i className="ri-store-2-line text-2xl"></i>
+                </a>
+                <a href="#" className="text-gray-400">
+                  <i className="ri-history-line text-2xl"></i>
+                </a>
+                <a href="#" className="text-gray-400">
+                  <i className="ri-user-line text-2xl"></i>
+                </a>
+              </nav>
+          );
+        };
+
+        const ProductDetails = ({ product, onGoHome, onGoToCategory }) => {
+          const [quantity, setQuantity] = useState(1);
+          const [activeTab, setActiveTab] = useState('description');
+          
+          // Weight Selection State
+          const weightOptions = [
+            { label: '100g', factor: 0.1 },
+            { label: '250g', factor: 0.25 },
+            { label: '500g', factor: 0.5 },
+            { label: '1kg', factor: 1 },
+            { label: '2kg', factor: 2 },
+          ];
+          const [selectedWeight, setSelectedWeight] = useState(weightOptions[3]); // Default to 1kg
+
+          // Price Calculation Logic
+          const currencySymbol = product.price.charAt(0);
+          const basePriceAmount = parseInt(product.price.substring(1).replace(/[^0-9]/g, ''));
+          const calculatedPrice = Math.round(basePriceAmount * selectedWeight.factor);
+
+          // Scroll to top when component mounts
+          useEffect(() => {
+            window.scrollTo(0, 0);
+          }, []);
+
+          return (
+            <div className="bg-white min-h-screen animate-fade-in relative z-20 pt-6 md:pt-24 pb-12">
+               <div className="w-full px-6 md:px-8">
+                  
+                  {/* Standard gap: gap-6 (24px) for mobile, gap-10 for desktop */}
+                  <div className="flex flex-col md:flex-row gap-6 lg:gap-10 items-start">
+                      
+                      {/* Left Column: Image */}
+                      <div className="w-full md:w-[45%] relative">
+                          <div className="sticky top-28">
+                              <div className="relative">
+                                {/* Height restricted to standard size */}
+                                <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-full max-h-[350px] md:max-h-[450px] object-contain rounded-3xl relative z-10 border border-gray-200"
+                                />
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Right Column: Content */}
+                      <div className="w-full md:w-[55%] flex flex-col pt-0">
+                         
+                         {/* 1. Breadcrumb - Standard mb-3 (12px) */}
+                         <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs font-bold capitalize tracking-wide mb-3">
+                            <button onClick={onGoHome} className="flex items-center gap-1 hover:text-orange-600 transition-colors cursor-pointer">
+                                <i className="ri-home-4-line text-sm mb-[2px]"></i>
+                                <span>Home</span>
+                            </button>
+                            <i className="ri-arrow-right-s-line text-xs"></i>
+                            <button onClick={() => onGoToCategory(product.category)} className="hover:text-orange-600 transition-colors cursor-pointer">
+                                {product.category}
+                            </button>
+                            <i className="ri-arrow-right-s-line text-xs"></i>
+                            <span className="text-gray-900">Product Details</span>
+                         </div>
+
+                         {/* Title + Desc Block - Standard mb-6 (24px) */}
+                         <div className="mb-6">
+                             {/* 2. Title */}
+                             <h1 className="text-2xl md:text-4xl font-extrabold text-gray-900 leading-tight mb-2 tracking-tight">
+                                {product.name}
+                             </h1>
+
+                             {/* 3. Short Description */}
+                             <p className="text-gray-500 text-[16px] leading-relaxed max-w-xl font-medium">
+                                Hand-picked from the finest local sources. Represents the pinnacle of freshness.
+                             </p>
+                         </div>
+
+                         {/* 4. Weight Selection Chips - Standard mb-6 (24px) */}
+                         <div className="mb-6">
+                             <span className="text-xs font-bold uppercase tracking-widest text-gray-900 mb-3 block">Choose Quantity</span>
+                             <div className="flex flex-wrap gap-2">
+                                {weightOptions.map((option) => (
+                                    <button
+                                        key={option.label}
+                                        onClick={() => setSelectedWeight(option)}
+                                        className={`px-5 py-2.5 rounded-lg text-xs font-bold border transition-all ${
+                                            selectedWeight.label === option.label
+                                                ? 'border-orange-500 text-orange-500 bg-white'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-orange-500 hover:text-orange-500'
+                                        }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                             </div>
+                         </div>
+
+                         {/* 5. Price & Quantity Row - Standard mb-8 (32px) */}
+                         <div className="flex items-center justify-between mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                             {/* Price Section */}
+                             <div className="flex items-center h-10">
+                                <div className="flex items-baseline gap-0.5">
+                                    <span className="text-lg font-bold text-gray-900 font-['Hind_Siliguri']">{currencySymbol}</span>
+                                    <span className="text-2xl font-black text-gray-900 tracking-tight">{calculatedPrice}</span>
+                                </div>
+                                
+                                <div className="w-[1px] h-6 bg-gray-300 mx-3"></div>
+
+                                <span className="text-sm text-gray-500 font-bold pt-1">{selectedWeight.label}</span>
+                             </div>
+
+                             {/* Quantity Section */}
+                             <div className="flex items-center bg-white border border-gray-200 rounded-lg h-10 px-2 shadow-sm">
+                                <button 
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    className="w-8 h-full flex items-center justify-center text-gray-400 hover:text-black transition-colors"
+                                >
+                                    <i className="ri-subtract-line"></i>
+                                </button>
+                                <span className="font-black text-base text-gray-900 w-8 text-center">{quantity}</span>
+                                <button 
+                                    onClick={() => setQuantity(quantity + 1)}
+                                    className="w-8 h-full flex items-center justify-center text-gray-400 hover:text-black transition-colors"
+                                >
+                                    <i className="ri-add-line"></i>
+                                </button>
+                             </div>
+                         </div>
+
+                         {/* 6. Action Buttons */}
+                         <div className="flex gap-3 mb-10">
+                            <button className="flex-1 bg-black text-white rounded-xl h-[52px] font-bold text-sm uppercase tracking-wider hover:bg-gray-800 transition-all flex items-center justify-center shadow-lg shadow-gray-200">
+                                Add to Cart
+                            </button>
+                            <button className="flex-1 bg-orange-600 text-white rounded-xl h-[52px] font-bold text-sm uppercase tracking-wider hover:bg-orange-700 transition-all flex items-center justify-center shadow-lg shadow-orange-100">
+                                Buy Now
+                            </button>
+                            <button className="w-[52px] h-[52px] shrink-0 border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:border-orange-500 hover:text-orange-500 bg-white transition-all">
+                                <i className="ri-share-forward-line text-xl"></i>
+                            </button>
+                         </div>
+
+                         {/* 7. Horizontal Tabs */}
+                         <div className="w-full">
+                            <div className="flex items-center justify-between border-y border-gray-200 py-3 mb-6">
+                                <button 
+                                    onClick={() => setActiveTab('description')}
+                                    className={`flex-1 text-center text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'description' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
+                                >
+                                    Description
+                                </button>
+                                
+                                <div className="w-[1px] h-4 bg-gray-200"></div>
+                                
+                                <button 
+                                    onClick={() => setActiveTab('reviews')}
+                                    className={`flex-1 text-center text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'reviews' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
+                                >
+                                    Reviews (12)
+                                </button>
+                                
+                                <div className="w-[1px] h-4 bg-gray-200"></div>
+                                
+                                <button 
+                                    onClick={() => setActiveTab('faq')}
+                                    className={`flex-1 text-center text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'faq' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
+                                >
+                                    FAQ
+                                </button>
+                            </div>
+
+                            <div className="min-h-[150px] text-sm text-gray-600 leading-relaxed font-medium">
+                                {activeTab === 'description' && (
+                                    <div className="animate-fade-in">
+                                        <p className="mb-4">
+                                            Experience the finest quality with our {product.name}. Sourced directly from premium artisan farms and crafted with care to ensure maximum freshness and taste.
+                                        </p>
+                                        <ul className="list-disc pl-5 space-y-1 text-gray-500">
+                                            <li>100% Organic & Natural</li>
+                                            <li>Farm-to-table freshness</li>
+                                            <li>Premium quality guaranteed</li>
+                                        </ul>
+                                    </div>
+                                )}
+                                {activeTab === 'reviews' && (
+                                    <div className="animate-fade-in flex flex-col gap-4">
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex text-orange-400 text-xs">
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                </div>
+                                                <span className="text-xs font-black text-gray-900">Rahim U.</span>
+                                            </div>
+                                            <p className="text-xs">Absolutely fresh and delicious! Delivery was super fast.</p>
+                                        </div>
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex text-orange-400 text-xs">
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-fill"></i>
+                                                    <i className="ri-star-half-fill"></i>
+                                                </div>
+                                                <span className="text-xs font-black text-gray-900">Karim S.</span>
+                                            </div>
+                                            <p className="text-xs">Good quality, packaging could be slightly better.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {activeTab === 'faq' && (
+                                    <div className="animate-fade-in space-y-3">
+                                        <div>
+                                            <h4 className="font-black text-gray-900 mb-1 text-xs">How long does it stay fresh?</h4>
+                                            <p className="text-xs">Ideally consumed within 3-4 days for peak freshness. Keep refrigerated.</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-gray-900 mb-1 text-xs">Is this organic?</h4>
+                                            <p className="text-xs">Yes, all our products are sourced from certified organic farms.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                         </div>
+
+                      </div>
+                  </div>
+               </div>
+            </div>
+          );
+        };
+
+        const App = () => {
+          const [activeCategory, setActiveCategory] = useState('all');
+          const [selectedProduct, setSelectedProduct] = useState(null);
+
+          const categories = [
+            { id: 'all', name: 'All', icon: 'ri-apps-2-line' },
+            { id: 'fruits', name: 'Fruits', icon: 'ri-apple-line' },
+            { id: 'vegetables', name: 'Vegetables', icon: 'ri-leaf-line' },
+            { id: 'meat', name: 'Meat', icon: 'ri-restaurant-2-line' },
+            { id: 'bakery', name: 'Bakery', icon: 'ri-cake-3-line' },
+            { id: 'pantry', name: 'Pantry', icon: 'ri-cup-line' },
+          ];
+
+          const products = [
+            // Fruits
+            { id: 13, name: 'Seasonal Premium Pick', price: '৳380', image: 'https://iili.io/fhZrDhX.png', category: 'fruits' },
+            { id: 6, name: 'Fresh Farm Oranges', price: '৳220', image: 'https://iili.io/fhZJ53N.md.png', category: 'fruits' },
+            { id: 7, name: 'Organic Green Apples', price: '৳290', image: 'https://iili.io/fhZJYvt.md.png', category: 'fruits' },
+            { id: 8, name: 'Sweet Red Cherries', price: '৳480', image: 'https://iili.io/fhZJuGR.md.png', category: 'fruits' },
+            { id: 22, name: 'Ripe Mangoes', price: '৳280', image: 'https://iili.io/fhZJ53N.md.png', category: 'fruits' },
+            { id: 23, name: 'Fresh Pineapple', price: '৳180', image: 'https://iili.io/fhZrDhX.png', category: 'fruits' },
+
+            // Vegetables
+            { id: 9, name: 'Fresh Broccoli', price: '৳120', image: 'https://iili.io/fhZJXF2.md.png', category: 'vegetables' },
+            { id: 10, name: 'Organic Carrots', price: '৳80', image: 'https://iili.io/fhZJtoJ.md.png', category: 'vegetables' },
+            { id: 11, name: 'Fresh Avocados', price: '৳550', image: 'https://iili.io/fhZdzH7.md.png', category: 'vegetables' },
+            { id: 24, name: 'Red Tomatoes', price: '৳70', image: 'https://iili.io/fhZJuGR.md.png', category: 'vegetables' },
+            { id: 25, name: 'Organic Spinach', price: '৳40', image: 'https://iili.io/fhZJXF2.md.png', category: 'vegetables' },
+            { id: 26, name: 'Crispy Lettuce', price: '৳60', image: 'https://iili.io/fhZJXF2.md.png', category: 'vegetables' },
+
+            // Meat (New Category)
+            { id: 40, name: 'Premium Beef Steak', price: '৳1200', image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=400&q=80', category: 'meat' },
+            { id: 41, name: 'Fresh Chicken Breast', price: '৳450', image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=400&q=80', category: 'meat' },
+            { id: 42, name: 'Organic Mutton', price: '৳1500', image: 'https://images.unsplash.com/photo-1603048297172-c92544798d5e?auto=format&fit=crop&w=400&q=80', category: 'meat' },
+            { id: 43, name: 'Whole Chicken', price: '৳650', image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=400&q=80', category: 'meat' },
+
+            // Bakery
+            { id: 1, name: 'Handmade Organic Sourdough', price: '৳450', image: 'https://iili.io/fhiC6Pf.png', category: 'bakery' },
+            { id: 2, name: 'Pure Butter Choco Cookies', price: '৳320', image: 'https://iili.io/fhsczxf.md.png', category: 'bakery' },
+            { id: 3, name: 'Premium Dark Chocolate', price: '৳250', image: 'https://iili.io/fhsc2Pp.md.png', category: 'bakery' },
+            { id: 4, name: 'Fresh Cream Cupcakes', price: '৳180', image: 'https://iili.io/fhscfSt.md.png', category: 'bakery' },
+            { id: 5, name: 'Artisan Baguette', price: '৳140', image: 'https://iili.io/fhscTil.md.png', category: 'bakery' },
+            { id: 20, name: 'French Butter Croissant', price: '৳160', image: 'https://iili.io/fhscTil.md.png', category: 'bakery' },
+            { id: 21, name: 'Blueberry Muffin', price: '৳130', image: 'https://iili.io/fhscfSt.md.png', category: 'bakery' },
+            { id: 31, name: 'Whole Wheat Bread', price: '৳120', image: 'https://iili.io/fhiC6Pf.png', category: 'bakery' },
+
+            // Pantry
+            { id: 12, name: 'Premium Almonds', price: '৳850', image: 'https://iili.io/fhZdNlp.md.png', category: 'pantry' },
+            { id: 27, name: 'Organic Honey', price: '৳550', image: 'https://iili.io/fhZdNlp.md.png', category: 'pantry' },
+            { id: 28, name: 'Extra Virgin Olive Oil', price: '৳850', image: 'https://iili.io/fhZdNlp.md.png', category: 'pantry' },
+            { id: 29, name: 'Basmati Rice (Premium)', price: '৳350', image: 'https://iili.io/fhiC6Pf.png', category: 'pantry' },
+            { id: 30, name: 'Mixed Nuts', price: '৳950', image: 'https://iili.io/fhZdNlp.md.png', category: 'pantry' },
+          ];
+
+          return (
+            <>
+              <Header onBack={selectedProduct ? () => setSelectedProduct(null) : undefined} />
+              {selectedProduct ? (
+                <ProductDetails 
+                  product={selectedProduct} 
+                  onGoHome={() => setSelectedProduct(null)}
+                  onGoToCategory={(category) => {
+                    setActiveCategory(category);
+                    setSelectedProduct(null);
+                  }}
+                />
+              ) : (
+                <>
+                  <Hero />
+                  <CategoryList 
+                    categories={categories} 
+                    activeCategory={activeCategory} 
+                    setActiveCategory={setActiveCategory} 
+                  />
+                  <ProductGrid 
+                    products={products}
+                    categories={categories.filter(c => c.id !== 'all')}
+                    activeCategory={activeCategory}
+                    onProductClick={(product) => setSelectedProduct(product)}
+                  />
+                  <MobileNav />
+                </>
+              )}
+            </>
+          );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
 </body>
 </html>
